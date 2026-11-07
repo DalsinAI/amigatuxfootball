@@ -27,7 +27,7 @@
 
 #include <iostream>
 
-#include "menu.h"
+#include "menu/menu.h"
 
 MenuLabel::MenuLabel(Menu *menu, std::string name, std::string identifier) :
 				MenuItem(menu, name, identifier)
