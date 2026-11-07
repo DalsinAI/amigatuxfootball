@@ -95,7 +95,12 @@ GameEngine::GameEngine(bool fullscreen) :
 {
 
 	// Start audio.
+#ifdef __amigaos__
+	/* the Team's mixer plays 22050 Hz whatever it is asked: say so */
+	if(Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
+#else
 	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
+#endif
 		WARN("audio failed to start : " << Mix_GetError());
 		m_audioOpen = false;
 	} else {

@@ -1,0 +1,104 @@
+# Tux Football 0.3.1 for AmigaOS 3.x, 68040/68060 + FPU, on OpenGPU's SDL
+# 1.2 (sdl12-compat).
+#
+#   make -f amiga/Makefile.amigaos -j2 dist \
+#        STOVE=/path/to/openamigagcc-16.2.0-open4 \
+#        NDK=/path/to/OpenNDK/Include_H SDLKIT=/path/to/opengpu-sdk
+#
+# src/Makefile.am's tuxfootball, amiga/config.h for configure's (no
+# gettext), its data at PROGDIR:data. SDLKIT is the OpenGPU developer kit:
+# libSDL.a, sdl12-compat on SDL2.module. It has no SDL_image or SDL_mixer
+# 1.2: the Team's amiga/sdl_image_lite.c (PNG on libpng, and TGA) and
+# amiga/sdl_mixer_lite.c (WAV, and the Ogg Vorbis music through
+# amiga/stb_vorbis.c; libmikmod for modules, which Tux Football has none
+# of) stand in. DEPS has the Team's static libpng, libjpeg and zlib
+# (/mnt/amigachrome/team2/deps/m68k-amigaos).
+
+STOVE   ?= $(HOME)/CradleLab/toolchain/openamigagcc-16.2.0-open4-x86_64-linux
+NDK     ?= $(HOME)/CradleLab/gfopensdk/OpenNDK/Include_H
+SDLKIT  ?= /mnt/amigachrome/team2/deps/opengpu-sdk
+DEPS    ?= /mnt/amigachrome/team2/deps/m68k-amigaos
+CC      = $(STOVE)/bin/m68k-amigaos-gcc
+CXX     = $(STOVE)/bin/m68k-amigaos-g++
+STRIP   = $(STOVE)/bin/m68k-amigaos-strip
+CPU     ?= -m68040 -m68881
+# -fno-tree-loop-distribute-patterns: GCC 16's loop miscompile (the kit's
+# sdl2-config gives it for GCC 16 too).
+OPT     ?= -O2 -fomit-frame-pointer -fno-tree-loop-distribute-patterns
+
+BUILD   = build/amigaos
+OBJDIR  = $(BUILD)/obj
+PROG    = TuxFootball
+OUT     = dist/TuxFootball
+
+DEFS    = -D__amigaos__ -DNDEBUG -DHAVE_CONFIG_H
+INC     = -Iamiga -Isrc -Iamiga/include/SDL -I$(SDLKIT)/include/SDL -I$(SDLKIT)/include
+CFLAGS  = -noixemul $(OPT) $(CPU) -fno-common -MMD -MP -w
+CXXFLAGS = $(CFLAGS) $(DEFS) $(INC) -std=gnu++98 -include amiga/amiga_prefix.hpp
+LDFLAGS = -noixemul $(CPU) -Wl,--wrap=SDL_RWFromFP -Wl,--wrap=SDL_RWFromFile
+LIBS    = -L$(SDLKIT)/lib -L$(DEPS)/lib -lpng -ljpeg -lz -lSDL -lpthread -lm
+
+CXXSRC  = $(wildcard src/*.cpp src/*/*.cpp src/*/*/*.cpp)
+SRC     = src/SFont.c
+CSRC    = amiga/stack.c amiga/sdl_image_lite.c amiga/sdl_mixer_lite.c amiga/stb_vorbis_impl.c \
+          amiga/amiga_rwops.c
+MIKMOD_SRC = $(wildcard amiga/libmikmod/*.c)
+MIKMOD_CFLAGS = -noixemul -O2 $(CPU) -fno-common -MMD -MP -std=gnu99 -w -DMIKMOD_BUILD \
+          -DMIKMOD_STATIC -DHAVE_LIMITS_H -DHAVE_SNPRINTF -DHAVE_UNISTD_H -DWORDS_BIGENDIAN=1 \
+          -DNO_DEPACKERS -DNO_HQMIXER -Iamiga/libmikmod -I$(NDK)
+
+OBJS    = $(CXXSRC:%.cpp=$(OBJDIR)/%.o) $(SRC:%.c=$(OBJDIR)/%.o) $(CSRC:%.c=$(OBJDIR)/%.o) \
+          $(MIKMOD_SRC:%.c=$(OBJDIR)/%.o)
+ICONS   = $(wildcard amiga/icons/*.info)
+
+all: $(BUILD)/$(PROG)
+
+$(BUILD)/$(PROG): $(OBJS)
+	$(CXX) $(LDFLAGS) -o $@.debug $(OBJS) $(LIBS)
+	$(STRIP) -o $@ $@.debug
+
+$(OBJDIR)/amiga/libmikmod/%.o: amiga/libmikmod/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(MIKMOD_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/amiga/%.o: amiga/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -std=gnu99 -Iamiga/include/SDL -Iamiga/libmikmod -I$(SDLKIT)/include/SDL \
+	  -I$(SDLKIT)/include -I$(DEPS)/include -I$(NDK) -DMIKMOD_STATIC -Wall -c -o $@ $<
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -std=gnu99 $(DEFS) $(INC) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+# The drawer: the program; data/ with the game's pictures, sounds and music
+# (the two crowd sounds are the Team's, see AMIGA_PORT.md); ReadMe,
+# upstream's README and AUTHORS, and the licences.
+dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
+	rm -rf $(OUT) && mkdir -p $(OUT)/data
+	cp $(BUILD)/$(PROG) $(OUT)/
+	cd data && find graphics sound -type f \( -name '*.png' -o -name '*.tga' -o -name '*.map' \
+	  -o -name '*.wav' -o -name '*.ogg' \) | while read f; do \
+	  mkdir -p ../$(OUT)/data/$$(dirname $$f) && cp $$f ../$(OUT)/data/$$f; done
+	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp README $(OUT)/ReadMe-upstream
+	cp AUTHORS $(OUT)/AUTHORS.txt
+	cp COPYING $(OUT)/COPYING.txt
+	cp amiga/libmikmod/COPYING.LIB $(OUT)/COPYING-libmikmod.txt
+	cp amiga/icons/TuxFootball.info amiga/icons/ReadMe.info $(OUT)/
+	for f in ReadMe-upstream AUTHORS.txt COPYING.txt COPYING-libmikmod.txt; do \
+	  cp amiga/icons/ReadMe.info $(OUT)/$$f.info; done
+	cp amiga/icons/Folder.info $(OUT)/data.info
+	cd $(OUT)/data && find . -mindepth 1 -type d | while read d; do \
+	  cp ../../../amiga/icons/Folder.info $$d.info; done
+	cp amiga/icons/TuxFootball-drawer.info dist/TuxFootball.info
+
+-include $(OBJS:.o=.d)
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all clean dist

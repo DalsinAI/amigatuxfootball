@@ -25,7 +25,10 @@
 #include <vector>
 #include <string>
 
-#ifdef PACKAGE_DATA_DIR
+#if defined(__amigaos__)
+/* the drawer's data, wherever it is started from */
+const std::string data_dir[] = { "PROGDIR:data" };
+#elif defined(PACKAGE_DATA_DIR)
 const std::string data_dir[] = { (std::string(PACKAGE_DATA_DIR)+"/tuxfootball").c_str(), "./data", "/usr/local/share/tuxfootball" };
 #else
 const std::string data_dir[] = { "./data", "/usr/local/share/tuxfootball" };
