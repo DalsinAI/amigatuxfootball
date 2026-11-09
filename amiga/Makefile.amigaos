@@ -91,9 +91,6 @@ dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
 	cp amiga/icons/TuxFootball.info amiga/icons/ReadMe.info $(OUT)/
 	for f in ReadMe-upstream AUTHORS.txt COPYING.txt COPYING-libmikmod.txt; do \
 	  cp amiga/icons/ReadMe.info $(OUT)/$$f.info; done
-	cp amiga/icons/Folder.info $(OUT)/data.info
-	cd $(OUT)/data && find . -mindepth 1 -type d | while read d; do \
-	  cp ../../../amiga/icons/Folder.info $$d.info; done
 	cp amiga/icons/TuxFootball-drawer.info dist/TuxFootball.info
 
 -include $(OBJS:.o=.d)
