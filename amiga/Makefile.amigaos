@@ -84,6 +84,7 @@ dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
 	  -o -name '*.wav' -o -name '*.ogg' \) | while read f; do \
 	  mkdir -p ../$(OUT)/data/$$(dirname $$f) && cp $$f ../$(OUT)/data/$$f; done
 	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp amiga/Controls $(OUT)/Controls
 	cp README $(OUT)/ReadMe-upstream
 	cp AUTHORS $(OUT)/AUTHORS.txt
 	cp COPYING $(OUT)/COPYING.txt
