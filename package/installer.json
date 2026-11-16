@@ -1,0 +1,18 @@
+{
+  "name": "Tux Football",
+  "version": "0.3.1-amigaos3",
+  "drawer": "TuxFootball",
+  "program": "TuxFootball",
+  "cpu": "68040",
+  "fpu": true,
+  "space": 25000000,
+  "modules": [
+    "SDL2.module"
+  ],
+  "keep": [
+    "Screenshots"
+  ],
+  "parent": "Work:Games",
+  "badge": "../amiga/icons/art/tuxfootball.png",
+  "script": "Install-TuxFootball"
+}
